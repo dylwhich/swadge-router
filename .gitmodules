@@ -1,0 +1,4 @@
+[submodule "submodules/wampcc"]
+	path = submodules/wampcc
+	url = https://github.com/darrenjs/wampcc.git
+	branch = origin/master
