@@ -23,7 +23,6 @@ void Wamp::on_scan(const Scan &scan){
 }
 
 void Wamp::on_status(const Status &status) {
-    std::cout << "on_status" << std::endl;
     if (status.last_button() != BUTTON::NONE) {
         wampcc::wamp_args args{{status.last_button_name()}, {{"badge_id", (uint64_t)status.mac_address()}}};
 

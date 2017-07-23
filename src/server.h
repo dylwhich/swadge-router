@@ -37,7 +37,8 @@ public:
               _host(host),
               _last_status(status),
               _route(route),
-              _last_scan() {}
+              _last_scan(),
+              _app_data(nullptr) {}
 
     struct sockaddr_in &sock_address() { return _sockaddr; }
     socklen_t sock_address_len() { return _sockaddr_len; }
@@ -100,15 +101,13 @@ class Server {
 public:
     Server()
             : _sockfd(-1),
-              _running(false),
-              _scan_callback(nullptr),
-              _status_callback(nullptr) {}
+              _running(false) {}
 
-    void set_on_scan(ScanCallback &&cb) {
+    void set_on_scan(ScanCallback cb) {
         _scan_callback = cb;
     }
 
-    void set_on_status(StatusCallback &&cb) {
+    void set_on_status(StatusCallback cb) {
         _status_callback = cb;
     }
 

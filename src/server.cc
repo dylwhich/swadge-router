@@ -64,6 +64,10 @@ void Server::handle_data(struct sockaddr_in &address, const char *data, ssize_t 
 
             auto badge = _badge_ips.find((uint64_t)status.mac_address());
             if (badge != _badge_ips.end()) {
+                if (_status_callback) {
+                    _status_callback(status);
+                }
+
                 badge->second.set_last_status(std::move(status));
                 badge->second.set_lights(255, 0, 0, 0, 255, 0, 0, 0, 255, 255, 0, 255);
             } else {
