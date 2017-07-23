@@ -174,6 +174,13 @@ public:
         buf[17] = '\0';
         return std::string(buf);
     }
+
+    static MacAddress null_mac() {
+        static uint8_t null_mac_data[6] {0, 0, 0, 0, 0, 0};
+        static MacAddress null_mac(null_mac_data);
+
+        return null_mac;
+    }
 };
 
 class Status {
@@ -218,7 +225,7 @@ class Status {
               _time(time) {}
 
 public:
-    static const Status decode_from_packet(const StatusPacket &packet);
+    static const Status decode_from_packet(const StatusPacket *packet);
 
     const MacAddress &mac_address() const { return _mac; }
     int               version()     const { return _version; }
@@ -278,6 +285,10 @@ public:
             _mac(mac),
             _rssi(rssi),
             _channel(channel) {}
+
+    const MacAddress &mac()     const { return _mac; }
+    int8_t            rssi()    const { return _rssi;}
+    uint8_t           channel() const { return _channel;}
 };
 
 class Scan {
@@ -293,18 +304,39 @@ class Scan {
               _stations(std::move(stations)) {}
 
 public:
-    static const Scan decode_from_packet(const ScanPacket &packet);
+    static const Scan decode_from_packet(const ScanPacket *packet);
+
+    Scan()
+    : _mac(MacAddress::null_mac()),
+      _timestamp(0),
+      _stations() {}
 
     const MacAddress &mac_address() const { return _mac; }
     const uint32_t    timestamp()   const { return _timestamp; }
     const std::vector<ScanStation> &stations() const { return _stations; }
 
+    bool update(const Scan &other) {
+        if (other._timestamp == _timestamp) {
+            _stations.insert(_stations.end(), other._stations.begin(), other._stations.end());
+            return true;
+        }
+
+        return false;
+    }
+
     friend std::ostream& operator<< (std::ostream &stream, const Scan &scan) {
         std::ostringstream str;
         str << "< Scan: "
             << "[" << std::string(scan.mac_address()) << "] "
-            << scan._stations.size() << " stations"
-            << " >";
+            << scan._stations.size() << " stations" << std::endl;
+
+        for (auto &station : scan.stations()) {
+            str << "    " << std::string(station.mac())
+                << " " << std::to_string(station.rssi())
+                << " (Channel " << std::to_string(station.channel()) << ")" << std::endl;
+        }
+
+        str << " >";
         stream << str.str();
         return stream;
     }
