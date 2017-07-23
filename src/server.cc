@@ -15,7 +15,7 @@
 #define PORT 8000
 
 void BadgeInfo::scan() {
-    ScanRequestPacket packet;
+    ScanRequestPacket packet{};
     packet.base.type = SCAN_REQUEST;
 
     _server->send_packet(this, (char*)&packet, sizeof(ScanPacket));
@@ -26,7 +26,7 @@ void BadgeInfo::set_lights(uint8_t r1, uint8_t g1, uint8_t b1,
                            uint8_t r3, uint8_t g3, uint8_t b3,
                            uint8_t r4, uint8_t g4, uint8_t b4,
                            uint8_t mask, uint8_t match) {
-    LightsPacket packet;
+    LightsPacket packet{};
     packet.base.type = LIGHTS;
     packet.mask = mask;
     packet.match = match;
@@ -125,9 +125,9 @@ void Server::handle_data(struct sockaddr_in &address, const char *data, ssize_t 
 }
 
 void Server::run() {
-    socklen_t clientlen;
-    struct sockaddr_in clientaddr;
-    char buf[BUFSIZE];
+    socklen_t clientlen = 0;
+    struct sockaddr_in clientaddr{};
+    char buf[BUFSIZE] {};
 
     _running = true;
 
@@ -147,7 +147,7 @@ void Server::run() {
     setsockopt(_sockfd, SOL_SOCKET, SO_REUSEADDR,
                (const void *) &optval, sizeof(int));
 
-    struct sockaddr_in serveraddr;
+    struct sockaddr_in serveraddr{};
     serveraddr.sin_family = AF_INET;
     serveraddr.sin_addr.s_addr = htonl(INADDR_ANY);
     serveraddr.sin_port = htons((unsigned short) PORT);
@@ -170,7 +170,7 @@ void Server::run() {
         /*
          * gethostbyaddr: determine who sent the datagram
          */
-        char addr[NI_MAXHOST], serv[NI_MAXSERV];
+        char addr[NI_MAXHOST] {}, serv[NI_MAXSERV] {};
         if (!getnameinfo((sockaddr*) &clientaddr, clientlen,
                     addr, sizeof(addr),
                     serv, sizeof(serv),
