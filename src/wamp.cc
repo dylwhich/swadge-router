@@ -9,11 +9,9 @@ void Wamp::on_scan(const Scan &scan){
 
     wampcc::json_array stations;
     for (const ScanStation &st : scan.stations()) {
-        wampcc::json_object station;
-        station.emplace("bssid", (const std::string&)st.mac());
-        station.emplace("rssi", st.rssi());
-        station.emplace("channel", st.channel());
-        stations.push_back(std::move(station));
+        stations.emplace_back(wampcc::json_object({{"bssid", (const std::string&)st.mac()},
+                                                   {"rssi", st.rssi()},
+                                                   {"channel", st.channel()}}));
     }
 
     data.insert(std::make_pair("stations", stations));

@@ -88,6 +88,10 @@ void Server::handle_data(struct sockaddr_in &address, const char *data, ssize_t 
             std::cout << scan << std::endl;
             auto badge = _badge_ips.find((uint64_t)scan.mac_address());
 
+            if (_scan_callback) {
+                _scan_callback(scan);
+            }
+
             if (badge != _badge_ips.end()) {
                 badge->second.on_scan(scan);
             }
