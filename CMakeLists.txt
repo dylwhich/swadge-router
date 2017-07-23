@@ -15,4 +15,6 @@ set(SOURCE_FILES
 
 add_executable(swadge_router ${SOURCE_FILES})
 
-target_link_libraries(swadge_router wampcc wampcc_json pthread)
+find_library(LIBWAMPCC libwampcc.a)
+find_library(LIBWAMPCC_JSON libwampcc_json.a)
+target_link_libraries(swadge_router ${LIBWAMPCC} ${LIBWAMPCC_JSON} pthread ssl crypto jansson uv)
