@@ -51,6 +51,8 @@ enum PACKET_TYPE {
     STATUS_REQUEST = 0x11,
 };
 
+const char button_char(BUTTON b);
+
 static const std::string &STRBUTTON_NONE("none");
 static const std::string STRBUTTON_RIGHT("right");
 static const std::string STRBUTTON_DOWN("down");

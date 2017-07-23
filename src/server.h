@@ -3,11 +3,170 @@
 
 #include <netinet/in.h>
 #include <functional>
-#include <map>
+#include <unordered_map>
 
 #include "packets.h"
 
 class Server;
+
+class GameInfo {
+    std::string _name;
+    std::string _sequence;
+    std::string _location;
+
+public:
+    GameInfo(const std::string name, const std::string &sequence = "", const std::string &location = "")
+            : _name(std::move(name)),
+              _sequence(sequence),
+              _location(location) {}
+
+    const std::string &name() const {
+        return _name;
+    }
+
+    bool use_sequence() const {
+        return !_sequence.empty();
+    }
+
+    bool use_location() const {
+        return !_location.empty();
+    }
+
+    const std::string &sequence() const {
+        return _sequence;
+    }
+
+    void set_sequence(const std::string sequence) {
+        _sequence = sequence;
+    }
+
+    const std::string &location() const {
+        return _location;
+    }
+
+    void set_location(const std::string location) {
+        _location = location;
+    }
+};
+
+template<int len = 16>
+class ButtonHistory {
+    BUTTON _values[len];
+    BUTTON *_cur, *_end;
+
+public:
+    ButtonHistory()
+            : _values({BUTTON::NONE}),
+              _cur(nullptr),
+              _end(nullptr) {
+        _cur = _values;
+        _end = _values + len;
+    }
+
+    void record(BUTTON b) {
+        *(_cur++) = b;
+        if (_cur >= _end) _cur = _values;
+    }
+
+    /**
+     * Matches the join code in any position
+     * @param seq
+     * @return
+     */
+    bool match_any(const char *seq) {
+        // Start the pointer into the sequence at one past the last one we inserted
+        const BUTTON *cmp = _cur;
+
+        // start the pointer into the check-sequence at the last one
+        const char *seq_start = seq + strlen(seq) - 1;
+
+        // the pointer we will use to compare
+        const char *idx = seq_start;
+
+        const BUTTON *match_start = nullptr;
+
+        for(;;) {
+            // Move to the previous button that was pressed
+            cmp--;
+
+            // wrap around if we end up before the beginning
+            if (cmp < _values) cmp = _end-1;
+
+            // compare the buffer to the sequence, and move to the previous character if successful
+            if (button_char(*cmp) == *idx) {
+                // Keep track of the first position where we matched a character, because we need to backtrack
+                // to the one after this if we fail in the middle
+                if (match_start == nullptr) {
+                    match_start = cmp;
+                }
+
+                idx--;
+            } else {
+                // Move back to the end of the sequence to start checking again
+                idx = seq_start;
+
+                // Backtrack to where we last succeeded and try the next one
+                if (match_start != nullptr) {
+                    cmp = match_start;
+                    match_start = nullptr;
+                }
+            }
+
+            // If we get all the way to the start of the sequence, then we've checked everywhere (successfully)
+            if (idx < seq) {
+                return true;
+            }
+
+
+            // If we get back to where we started, then we've checked everywhere (unsuccessfully)
+            if (cmp == _cur) {
+                return false;
+            }
+        }
+    }
+
+    /**
+     * Matches the join code in the last position
+     * @param seq
+     * @return
+     */
+    bool match(const char *seq) {
+        // Start the pointer into the sequence at one past the last one we inserted
+        const BUTTON *cmp = _cur;
+
+        // start the pointer into the check-sequence at the last one
+        const char *seq_start = seq + strlen(seq) - 1;
+
+        // the pointer we will use to compare
+        const char *idx = seq_start;
+
+        for(;;) {
+            // Move to the previous button that was pressed
+            cmp--;
+
+            // wrap around if we end up before the beginning
+            if (cmp < _values) cmp = _end-1;
+
+            // compare the buffer to the sequence, and move to the previous character if successful
+            if (button_char(*cmp) == *idx) {
+                idx--;
+            } else {
+                return false;
+            }
+
+            // If we get all the way to the start of the sequence, then we've checked everywhere (successfully)
+            if (idx < seq) {
+                return true;
+            }
+
+
+            // If we get back to where we started, then the sequence is too long.
+            if (cmp == _cur) {
+                return false;
+            }
+        }
+    }
+};
 
 class BadgeInfo {
     Server *_server;
@@ -21,8 +180,8 @@ class BadgeInfo {
     uint64_t _route;
 
     Scan _last_scan;
-
-    void *_app_data;
+    ButtonHistory<12> _history;
+    const GameInfo *_game;
 
 public:
     BadgeInfo(Server *server,
@@ -38,7 +197,8 @@ public:
               _last_status(status),
               _route(route),
               _last_scan(),
-              _app_data(nullptr) {}
+              _history(),
+              _game(nullptr) {}
 
     struct sockaddr_in &sock_address() { return _sockaddr; }
     socklen_t sock_address_len() { return _sockaddr_len; }
@@ -54,16 +214,16 @@ public:
 
     void set_last_status(const Status &&status) {
         _last_status = status;
+
+        if (_last_status.last_button() != BUTTON::NONE && !_last_status.button_down()) {
+            _history.record(_last_status.last_button());
+        }
     }
 
     uint64_t route() { return _route; }
 
     void set_route(uint64_t route) {
         _route = route;
-    }
-
-    void *app_data() {
-        return _app_data;
     }
 
     void on_scan(const Scan &scan) {
@@ -76,6 +236,22 @@ public:
         return _last_scan;
     }
 
+    bool in_game() {
+        return _game != nullptr;
+    }
+
+    const GameInfo *current_game() {
+        return _game;
+    }
+
+    bool check_game_join(const GameInfo *game) {
+        return game->use_sequence() && _history.match(game->sequence().c_str());
+    }
+
+    void set_game(const GameInfo *game) {
+        _game = game;
+    }
+
     void scan();
     void set_lights(uint8_t r1, uint8_t g1, uint8_t b1,
                     uint8_t r2, uint8_t g2, uint8_t b2,
@@ -86,6 +262,7 @@ public:
 
 using ScanCallback = std::function<void(const Scan&)>;
 using StatusCallback = std::function<void(const Status&)>;
+using JoinCallback = std::function<void(uint64_t, const std::string&)>;
 
 
 class Server {
@@ -94,9 +271,11 @@ class Server {
 
     ScanCallback _scan_callback;
     StatusCallback _status_callback;
+    JoinCallback _join_callback;
 
 
-    std::map <uint64_t, BadgeInfo> _badge_ips;
+    std::unordered_map<uint64_t, BadgeInfo> _badge_ips;
+    std::vector<GameInfo> _games;
 
 public:
     Server()
@@ -109,6 +288,22 @@ public:
 
     void set_on_status(StatusCallback cb) {
         _status_callback = cb;
+    }
+
+    void set_on_join(JoinCallback cb) {
+        _join_callback = cb;
+    }
+
+    void new_game(const std::string &name, const std::string &sequence = "", const std::string &location = "") {
+        for (auto &game : _games) {
+            if (game.name() == name) {
+                game.set_sequence(sequence);
+                game.set_location(location);
+                return;
+            }
+        }
+
+        _games.emplace_back(name, sequence, location);
     }
 
     void handle_data(struct sockaddr_in &address, const char *data, ssize_t len);

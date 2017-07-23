@@ -16,7 +16,7 @@ void Wamp::on_scan(const Scan &scan){
 
     data.insert(std::make_pair("stations", stations));
 
-    wampcc::wamp_args args{{{}}, data};
+    wampcc::wamp_args args{{}, data};
     _session->publish("badge." + std::to_string((uint64_t)scan.mac_address()) + ".scan", data, std::move(args));
 }
 
@@ -26,6 +26,10 @@ void Wamp::on_status(const Status &status) {
 
         _session->publish("badge." + std::to_string((uint64_t)status.mac_address()) + ".button." + (status.button_down() ? "press" : "release"), {}, std::move(args));
     }
+}
+
+void Wamp::on_join(uint64_t badge_id, const std::string &game_name) {
+    _session->publish("game." + game_name + ".player.join", {}, {{badge_id}, {}});
 }
 
 void Wamp::run() {
@@ -62,6 +66,7 @@ void Wamp::run() {
 
         _server->set_on_scan(std::bind(&Wamp::on_scan, this, _1));
         _server->set_on_status(std::bind(&Wamp::on_status, this, _1));
+        _server->set_on_join(std::bind(&Wamp::on_join, this, _1, _2));
 
         std::cout << "Set on status" << std::endl;
 

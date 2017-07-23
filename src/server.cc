@@ -80,6 +80,20 @@ void Server::handle_data(struct sockaddr_in &address, const char *data, ssize_t 
                 }
 
                 badge->second.set_last_status(std::move(status));
+
+                if (!badge->second.in_game()) {
+                    for (const auto &game : _games) {
+                        if (badge->second.check_game_join(&game)) {
+                            badge->second.set_game(&game);
+
+                            if (_join_callback) {
+                                _join_callback(badge->first, game.name());
+                            }
+                            break;
+                        }
+                    }
+                }
+
                 badge->second.set_lights(255, 0, 0, 0, 255, 0, 0, 0, 255, 255, 0, 255);
             } else {
             }

@@ -1,5 +1,21 @@
 #include "packets.h"
 
+const char button_char(BUTTON b) {
+    static const char MAP[] {
+            '\0',
+            'r',
+            'd',
+            'l',
+            'u',
+            'e',
+            's',
+            'b',
+            'a'
+    };
+
+    return MAP[(int)b];
+}
+
 const std::string &button_name(BUTTON button) {
     switch (button) {
         case BUTTON::NONE:
