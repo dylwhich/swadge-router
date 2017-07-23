@@ -63,6 +63,17 @@ void Server::handle_data(struct sockaddr_in &address, const char *data, ssize_t 
             std::cout << "[RECV]: " << status << std::endl;
 
             auto badge = _badge_ips.find((uint64_t)status.mac_address());
+            if (badge == _badge_ips.end()) {
+                auto res = _badge_ips.emplace(
+                        std::piecewise_construct,
+                        std::forward_as_tuple((uint64_t)status.mac_address()),
+                        std::forward_as_tuple(this, address, sizeof(struct sockaddr), "", std::move(status))
+                );
+
+                badge = res.first;
+            }
+
+
             if (badge != _badge_ips.end()) {
                 if (_status_callback) {
                     _status_callback(status);
@@ -71,13 +82,6 @@ void Server::handle_data(struct sockaddr_in &address, const char *data, ssize_t 
                 badge->second.set_last_status(std::move(status));
                 badge->second.set_lights(255, 0, 0, 0, 255, 0, 0, 0, 255, 255, 0, 255);
             } else {
-                _badge_ips.insert(std::make_pair((uint64_t)status.mac_address(),
-                               BadgeInfo(this,
-                                         address,
-                                         sizeof(struct sockaddr),
-                                         "",
-                                         std::move(status))));
-                //_badge_ips.find((uint64_t)status.mac_address())->second.scan();
             }
 
             break;
