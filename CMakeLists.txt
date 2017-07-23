@@ -5,6 +5,7 @@ project(swadge_router CXX)
 set(CMAKE_CXX_STANDARD 11)
 
 set(SOURCE_FILES
+        src/wamp.cc
         src/wamp.h
         src/packets.cc
         src/packets.h

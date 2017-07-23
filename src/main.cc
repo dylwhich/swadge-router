@@ -2,7 +2,7 @@
 #include "wamp.h"
 
 int main() {
-    Server server;
+    auto server = std::make_shared<Server>();
 
     std::thread server_thread(std::bind(&Server::run, server));
 

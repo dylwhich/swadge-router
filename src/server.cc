@@ -7,7 +7,6 @@
 #include <sys/socket.h>
 #include <arpa/inet.h>
 #include <iostream>
-#include <wampcc/protocol.h>
 
 #include "packets.h"
 #include "server.h"
