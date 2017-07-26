@@ -171,6 +171,8 @@ public:
 class BadgeInfo {
     Server *_server;
 
+    uint64_t _mac;
+
     struct sockaddr_in _sockaddr;
     socklen_t _sockaddr_len;
 
@@ -185,12 +187,14 @@ class BadgeInfo {
 
 public:
     BadgeInfo(Server *server,
+              uint64_t mac,
               struct sockaddr_in &sockaddr,
               socklen_t sockaddr_len,
               const std::string &host,
               const Status &&status,
               uint64_t route = 0)
             : _server(server),
+              _mac(mac),
               _sockaddr(sockaddr),
               _sockaddr_len(sockaddr_len),
               _host(host),

@@ -14,9 +14,19 @@
 #define BUFSIZE 1024
 #define PORT 8000
 
+void set_mac_address(uint8_t *data, uint64_t mac) {
+    data[0] = (uint8_t)((mac >> 40) & 0xff);
+    data[1] = (uint8_t)((mac >> 32) & 0xff);
+    data[2] = (uint8_t)((mac >> 24) & 0xff);
+    data[3] = (uint8_t)((mac >> 16) & 0xff);
+    data[4] = (uint8_t)((mac >> 8) & 0xff);
+    data[5] = (uint8_t)(mac & 0xff);
+}
+
 void BadgeInfo::scan() {
     ScanRequestPacket packet{};
     packet.base.type = SCAN_REQUEST;
+    set_mac_address(packet.base.mac.mac, _mac);
 
     _server->send_packet(this, (char*)&packet, sizeof(ScanPacket));
 }
@@ -28,6 +38,8 @@ void BadgeInfo::set_lights(uint8_t r1, uint8_t g1, uint8_t b1,
                            uint8_t mask, uint8_t match) {
     LightsPacket packet{};
     packet.base.type = LIGHTS;
+    set_mac_address(packet.base.mac.mac, _mac);
+
     packet.mask = mask;
     packet.match = match;
 
@@ -67,7 +79,7 @@ void Server::handle_data(struct sockaddr_in &address, const char *data, ssize_t 
                 auto res = _badge_ips.emplace(
                         std::piecewise_construct,
                         std::forward_as_tuple((uint64_t)status.mac_address()),
-                        std::forward_as_tuple(this, address, sizeof(struct sockaddr), "", std::move(status))
+                        std::forward_as_tuple(this, (uint64_t)status.mac_address(), address, sizeof(struct sockaddr), "", std::move(status))
                 );
 
                 badge = res.first;
