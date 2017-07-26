@@ -240,3 +240,12 @@ void Server::send_packet(uint64_t mac, const char *packet, size_t packet_len) {
         send_packet(badge->second, packet, packet_len);
     }
 }
+
+BadgeInfo *Server::find_badge(uint64_t mac) {
+    auto badge = _badge_ips.find(mac);
+    if (badge != _badge_ips.end()) {
+        return &badge->second;
+    }
+
+    return nullptr;
+}

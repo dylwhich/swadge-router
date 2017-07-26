@@ -317,6 +317,16 @@ public:
     void send_packet(MacAddress &mac, const char *packet, size_t packet_len);
     void send_packet(uint64_t mac, const char *packet, size_t packet_len);
 
+    BadgeInfo *find_badge(uint64_t mac);
+
+    template<typename M, typename... Args>
+    void try_badge_call(M m, uint64_t mac, Args&&... args) {
+        auto badge = find_badge(mac);
+        if (badge != nullptr) {
+            std::bind(m, badge, std::forward<Args>(args)...)();
+        }
+    }
+
     void run();
 };
 

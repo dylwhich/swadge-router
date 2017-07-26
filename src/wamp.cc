@@ -1,5 +1,7 @@
 #include "wamp.h"
 
+#include <regex>
+
 using namespace std::placeholders;
 
 void Wamp::on_scan(const Scan &scan){
@@ -32,6 +34,26 @@ void Wamp::on_join(uint64_t badge_id, const std::string &game_name) {
     _session->publish("game." + game_name + ".player.join", {}, {{badge_id}, {}});
 }
 
+void Wamp::on_subscribe_cb(wampcc::wamp_subscribed &evt) {
+    if (evt.was_error) {
+        std::cout << "Err: " << evt.error_uri << std::endl;
+    } else {
+        //std::cout << "Subscribe OK" << std::endl;
+    }
+}
+
+void Wamp::on_lights(uint64_t badge_id,
+                     int r1, int g1, int b1,
+                     int r2, int g2, int b2,
+                     int r3, int g3, int b3,
+                     int r4, int g4, int b4,
+                     int match, int mask) {
+
+    _server->try_badge_call(&BadgeInfo::set_lights, badge_id, r1, g1, b1, r2, g2, b2, r3, g3, b3, r4, g4, b4, match, mask);
+}
+
+static const std::regex badge_id_regex("badge\\.([0-9]+)\\..*");
+
 void Wamp::run() {
     try {
         /* Create the wampcc kernel. */
@@ -63,6 +85,27 @@ void Wamp::run() {
         if (!_session->is_open()) {
             throw std::runtime_error("realm logon failed");
         }
+
+        _session->subscribe("badge..lights", {{"match", "wildcard"}},
+                            std::bind(&Wamp::on_subscribe_cb, this, _1),
+                            [this] (wampcc::wamp_subscription_event ev) {
+                                auto a = ev.args.args_list;
+
+                                std::smatch res;
+                                if (std::regex_match(ev.details["topic"].as_string(), res, badge_id_regex)) {
+                                    uint64_t badge_id = std::stoull(res[1]);
+                                    int a0 = a[0].as_int();
+                                    int a1 = a[1].as_int();
+                                    int a2 = a[2].as_int();
+                                    int a3 = a[3].as_int();
+                                    on_lights(badge_id,
+                                              (a0 >> 16) & 0xff, (a0 >> 8) & 0xff, a0 & 0xff,
+                                              (a1 >> 16) & 0xff, (a1 >> 8) & 0xff, a1 & 0xff,
+                                              (a2 >> 16) & 0xff, (a2 >> 8) & 0xff, a2 & 0xff,
+                                              (a3 >> 16) & 0xff, (a3 >> 8) & 0xff, a3 & 0xff,
+                                              0, 0);
+                                }
+                            });
 
         _server->set_on_scan(std::bind(&Wamp::on_scan, this, _1));
         _server->set_on_status(std::bind(&Wamp::on_status, this, _1));
