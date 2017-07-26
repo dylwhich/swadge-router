@@ -179,7 +179,7 @@ class BadgeInfo {
     std::string _host;
 
     Status _last_status;
-    uint64_t _route;
+    uint64_t _station;
 
     Scan _last_scan;
     ButtonHistory<12> _history;
@@ -192,14 +192,14 @@ public:
               socklen_t sockaddr_len,
               const std::string &host,
               const Status &&status,
-              uint64_t route = 0)
+              uint64_t station = 0)
             : _server(server),
               _mac(mac),
               _sockaddr(sockaddr),
               _sockaddr_len(sockaddr_len),
               _host(host),
               _last_status(status),
-              _route(route),
+              _station(station),
               _last_scan(),
               _history(),
               _game(nullptr) {}
@@ -219,16 +219,14 @@ public:
     void set_last_status(const Status &&status) {
         _last_status = status;
 
+        _station = (uint64_t)status.bssid();
+
         if (_last_status.last_button() != BUTTON::NONE && !_last_status.button_down()) {
             _history.record(_last_status.last_button());
         }
     }
 
-    uint64_t route() { return _route; }
-
-    void set_route(uint64_t route) {
-        _route = route;
-    }
+    uint64_t station() { return _station; }
 
     void on_scan(const Scan &scan) {
         if (!_last_scan.update(scan)) {
