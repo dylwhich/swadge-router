@@ -111,8 +111,6 @@ void Wamp::run() {
         _server->set_on_status(std::bind(&Wamp::on_status, this, _1));
         _server->set_on_join(std::bind(&Wamp::on_join, this, _1, _2));
 
-        std::cout << "Set on status" << std::endl;
-
         while (true) {
             std::this_thread::sleep_for(std::chrono::seconds(1));
         }

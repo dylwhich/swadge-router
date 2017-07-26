@@ -65,17 +65,16 @@ void BadgeInfo::set_lights(uint8_t r1, uint8_t g1, uint8_t b1,
 
 void Server::handle_data(struct sockaddr_in &address, const char *data, ssize_t len) {
     if (len < sizeof(BasePacket)) {
-        std::cout << "Discarding junk packet" << std::endl;
         return;
     }
 
     switch (reinterpret_cast<const BasePacket*>(data)->type) {
         case PACKET_TYPE::STATUS: {
             const Status status = Status::decode_from_packet(reinterpret_cast<const StatusPacket*>(data));
-            std::cout << "[RECV]: " << status << std::endl;
 
             auto badge = _badge_ips.find((uint64_t)status.mac_address());
             if (badge == _badge_ips.end()) {
+                // New badge!
                 auto res = _badge_ips.emplace(
                         std::piecewise_construct,
                         std::forward_as_tuple((uint64_t)status.mac_address()),
@@ -83,37 +82,41 @@ void Server::handle_data(struct sockaddr_in &address, const char *data, ssize_t 
                 );
 
                 badge = res.first;
+
+                badge->second.set_lights(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+            } else {
+                // We don't want to do this for a new badge, since it has no last update
+                // Check if the badge was rebooted
+                if (status.update_count() < badge->second.last_status().update_count()) {
+                    badge->second.set_lights(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+                }
             }
 
+            if (_status_callback) {
+                _status_callback(status);
+            }
 
-            if (badge != _badge_ips.end()) {
-                if (_status_callback) {
-                    _status_callback(status);
-                }
+            badge->second.set_last_status(std::move(status));
 
-                badge->second.set_last_status(std::move(status));
+            if (!badge->second.in_game()) {
+                for (const auto &game : _games) {
+                    if (badge->second.check_game_join(&game)) {
+                        badge->second.set_game(&game);
 
-                if (!badge->second.in_game()) {
-                    for (const auto &game : _games) {
-                        if (badge->second.check_game_join(&game)) {
-                            badge->second.set_game(&game);
-
-                            if (_join_callback) {
-                                _join_callback(badge->first, game.name());
-                            }
-                            break;
+                        if (_join_callback) {
+                            _join_callback(badge->first, game.name());
                         }
+                        break;
                     }
                 }
-
-                badge->second.set_lights(255, 0, 0, 0, 255, 0, 0, 0, 255, 255, 0, 255);
-            } else {
             }
 
             break;
         }
 
         case PACKET_TYPE::SCAN: {
+            // TODO Scan packets may be entirely handled by another server
+            /*
             const Scan scan = Scan::decode_from_packet(reinterpret_cast<const ScanPacket*>(data));
             std::cout << scan << std::endl;
             auto badge = _badge_ips.find((uint64_t)scan.mac_address());
@@ -124,13 +127,13 @@ void Server::handle_data(struct sockaddr_in &address, const char *data, ssize_t 
 
             if (badge != _badge_ips.end()) {
                 badge->second.on_scan(scan);
-            }
+            }*/
 
             break;
         }
 
         default:
-        std::cout << "Got UNKNOWN packet!" << std::endl;
+            std::cout << "Got UNKNOWN packet!" << std::endl;
             // should never happen!
             break;
     }
@@ -142,8 +145,6 @@ void Server::run() {
     char buf[BUFSIZE] {};
 
     _running = true;
-
-    std::cout << "Server running" << std::endl;
 
     /*
      * socket: create the parent socket
@@ -188,20 +189,10 @@ void Server::run() {
                     serv, sizeof(serv),
                     NI_NUMERICHOST | NI_NUMERICSERV)) {
 
-            std::cout << "server received " << count << " bytes from " << addr << std::endl;
             handle_data(clientaddr, buf, count);
         } else {
             std::cerr << "ERR? " << gai_strerror(errno) << "(" << errno << ")" << std::endl;
         }
-
-        /*
-         * sendto: echo the input back to the client
-         */
-        //n = sendto(_sockfd, buf, strlen(buf), 0, (struct sockaddr *) &clientaddr, clientlen);
-        //if (n < 0) {
-        //    error("ERROR in sendto");
-        //    break;
-        //}
     }
 }
 
