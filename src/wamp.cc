@@ -4,7 +4,14 @@
 
 using namespace std::placeholders;
 
-void Wamp::on_scan(const Scan &scan){
+
+int64_t now() {
+    using namespace std::chrono;
+    return duration_cast<milliseconds>(system_clock::now().time_since_epoch()).count();
+}
+
+
+void Wamp::on_scan(const Scan &scan) {
     wampcc::json_object data;
     data.emplace("timestamp", scan.timestamp());
     data.emplace("badge_id", (uint64_t)scan.mac_address());
@@ -24,7 +31,9 @@ void Wamp::on_scan(const Scan &scan){
 
 void Wamp::on_status(const Status &status) {
     if (status.last_button() != BUTTON::NONE) {
-        wampcc::wamp_args args{{status.last_button_name()}, {{"badge_id", (uint64_t)status.mac_address()}}};
+        wampcc::wamp_args args{{status.last_button_name()}, {
+                {"badge_id", (uint64_t)status.mac_address()},
+                {"timestamp", now()}}};
 
         _session->publish("badge." + std::to_string((uint64_t)status.mac_address()) + ".button." + (status.button_down() ? "press" : "release"), {}, std::move(args));
     }

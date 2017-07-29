@@ -1,10 +1,13 @@
-#ifndef WAMP_H
-#define WAMP_H
+#ifndef SWADGE_WAMP_H
+#define SWADGE_WAMP_H
 
 #include <wampcc/wampcc.h>
+#include <chrono>
 
 #include "packets.h"
 #include "server.h"
+
+int64_t now();
 
 class Wamp {
     std::shared_ptr<Server> _server;
