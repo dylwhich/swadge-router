@@ -107,9 +107,85 @@ void Wamp::run() {
                                 }
                             });
 
+        _session->subscribe("game.kick", {},
+                            std::bind(&Wamp::on_subscribe_cb, this, _1),
+                            [this] (wampcc::wamp_subscription_event ev) {
+                                auto args = ev.args.args_dict;
+
+                                auto game_it = args.find("game_id");
+                                if (game_it == args.end()) {
+                                    std::cout << "Game ID not provided for kick" << std::endl;
+                                    return;
+                                }
+
+                                auto badge_id_it = args.find("badge_id");
+                                if (badge_id_it == args.end()) {
+                                    std::cout << "Badge ID not provided for kick" << std::endl;
+                                    return;
+                                }
+
+                                auto badge_it = _server->find_badge(badge_id_it->second.as_uint());
+                                if (badge_it != nullptr) {
+                                    badge_it->set_game(nullptr);
+                                    _session->publish("game." + game_it->second.as_string() + ".player.leave", {}, {{badge_it->mac()}, {}});
+                                }
+
+                            });
+
+        _session->provide("game.register", {}, [](wampcc::wamp_invocation &invoc) {
+            auto *server = reinterpret_cast<Server*>(invoc.user);
+            auto args = invoc.args.args_list;
+            auto kwargs = invoc.args.args_dict;
+
+            std::string game_id, sequence, location;
+
+            if (args.empty()) {
+                // Maybe game_id is in the kwargs
+
+                auto f = kwargs.find("game_id");
+                if (f != kwargs.end()) {
+                    game_id = f->second.as_string();
+                } else {
+                    // No game found... err
+                    invoc.yield(wampcc::json_object {{"error", "game_id not present"}});
+                }
+            } else {
+                game_id = args[0].as_string();
+            }
+
+            auto fseq = kwargs.find("sequence");
+            if (fseq != kwargs.end()) {
+                sequence = fseq->second.as_string();
+            } else {
+                sequence = "";
+            }
+
+            auto floc = kwargs.find("sequence");
+            if (fseq != kwargs.end()) {
+                location = floc->second.as_string();
+            } else {
+                location = "";
+            }
+
+            try {
+                server->new_game(game_id, sequence, location);
+                auto players = server->game_players(game_id);
+                wampcc::json_array json_players;
+
+                for (uint64_t player_id : players) {
+                    json_players.emplace_back(player_id);
+                }
+                invoc.yield(wampcc::json_object {{"success", "Game successfully registered"}, {"players", json_players}});
+            } catch (std::exception &e) {
+                invoc.yield(wampcc::json_object {{"error", e.what()}});
+            }
+        }, _server.get());
+
         _server->set_on_scan(std::bind(&Wamp::on_scan, this, _1));
         _server->set_on_status(std::bind(&Wamp::on_status, this, _1));
         _server->set_on_join(std::bind(&Wamp::on_join, this, _1, _2));
+
+        _session->publish("game.request_register", {}, {});
 
         while (true) {
             std::this_thread::sleep_for(std::chrono::seconds(1));

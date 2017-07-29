@@ -62,6 +62,17 @@ void BadgeInfo::set_lights(uint8_t r1, uint8_t g1, uint8_t b1,
     _server->send_packet(this, (char*)&packet, sizeof(LightsPacket));
 }
 
+const std::vector<uint64_t> Server::game_players(const std::string &game_id) {
+    std::vector<uint64_t> players;
+    for (const auto &player : _badge_ips) {
+        if (player.second.in_game() && player.second.current_game()->name() == game_id) {
+            players.push_back(player.second.mac());
+        }
+    }
+
+    return players;
+}
+
 
 void Server::handle_data(struct sockaddr_in &address, const char *data, ssize_t len) {
     if (len < sizeof(BasePacket)) {

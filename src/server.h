@@ -4,6 +4,7 @@
 #include <netinet/in.h>
 #include <functional>
 #include <unordered_map>
+#include <stdexcept>
 
 #include "packets.h"
 
@@ -238,20 +239,25 @@ public:
         return _last_scan;
     }
 
-    bool in_game() {
+    bool in_game() const {
         return _game != nullptr;
     }
 
-    const GameInfo *current_game() {
+    const GameInfo *current_game() const {
         return _game;
     }
 
     bool check_game_join(const GameInfo *game) {
-        return game->use_sequence() && _history.match(game->sequence().c_str());
+        return (game->use_sequence() && _history.match(game->sequence().c_str()))
+                || (game->use_location() && _location == game->location());
     }
 
     void set_game(const GameInfo *game) {
         _game = game;
+    }
+
+    uint64_t mac() const {
+        return _mac;
     }
 
     void scan();
@@ -297,16 +303,31 @@ public:
     }
 
     void new_game(const std::string &name, const std::string &sequence = "", const std::string &location = "") {
+        GameInfo *found_game = nullptr;
+
         for (auto &game : _games) {
             if (game.name() == name) {
-                game.set_sequence(sequence);
-                game.set_location(location);
-                return;
+                found_game = &game;
+            } else {
+                if (game.use_sequence() && game.sequence() == sequence) {
+                    throw "Sequence " + sequence + " already in use by " + game.name();
+                }
+
+                if (game.use_location() && game.location() == location) {
+                    throw "Location " + location + " already in use by " + game.name();
+                }
             }
         }
 
-        _games.emplace_back(name, sequence, location);
+        if (found_game != nullptr) {
+            found_game->set_sequence(sequence);
+            found_game->set_location(location);
+        } else {
+            _games.emplace_back(name, sequence, location);
+        }
     }
+
+    const std::vector<uint64_t> game_players(const std::string &name);
 
     void handle_data(struct sockaddr_in &address, const char *data, ssize_t len);
 
