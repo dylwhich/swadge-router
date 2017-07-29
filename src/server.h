@@ -57,9 +57,7 @@ class ButtonHistory {
 
 public:
     ButtonHistory()
-            : _values({BUTTON::NONE}),
-              _cur(nullptr),
-              _end(nullptr) {
+            : _values{BUTTON::NONE} {
         _cur = _values;
         _end = _values + len;
     }
@@ -182,6 +180,7 @@ class BadgeInfo {
     Status _last_status;
     uint64_t _station;
 
+    std::string _location;
     Scan _last_scan;
     ButtonHistory<12> _history;
     const GameInfo *_game;
@@ -201,6 +200,7 @@ public:
               _host(host),
               _last_status(status),
               _station(station),
+              _location(),
               _last_scan(),
               _history(),
               _game(nullptr) {}
