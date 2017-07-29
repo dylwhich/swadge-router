@@ -72,10 +72,14 @@ void Wamp::run() {
 
         /* Create the TCP socket and attempt to connect. */
         std::unique_ptr<wampcc::tcp_socket> socket(new wampcc::tcp_socket(&the_kernel));
-        socket->connect("127.0.0.1", 8080).wait_for(std::chrono::seconds(3));
+        auto conn_fut = socket->connect("127.0.0.1", 1337);
+        conn_fut.wait_for(std::chrono::seconds(3));
 
-        if (!socket->is_connected())
+        if (!socket->is_connected()) {
+            wampcc::uverr err = conn_fut.get();
+            std::cout << "Connect failed: " << err.message() << std::endl;
             throw std::runtime_error("connect failed");
+        }
 
         /* With the connected socket, create a wamp session & logon to the realm
          * called 'default_realm'. */
