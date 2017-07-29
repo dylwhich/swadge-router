@@ -141,6 +141,7 @@ void Wamp::run() {
                                 if (badge_it != nullptr) {
                                     badge_it->set_game(nullptr);
                                     _session->publish("game." + game_it->second.as_string() + ".player.leave", {}, {{badge_it->mac()}, {}});
+                                    _server->try_badge_call(&BadgeInfo::set_lights, badge_it->mac(), 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
                                 }
 
                             });
