@@ -99,7 +99,7 @@ void Wamp::run() {
             throw std::runtime_error("realm logon failed");
         }
 
-        _session->subscribe("badge..lights", {{"match", "wildcard"}},
+        _session->subscribe("badge..lights_static", {{"match", "wildcard"}},
                             std::bind(&Wamp::on_subscribe_cb, this, _1),
                             [this] (wampcc::wamp_subscription_event ev) {
                                 auto a = ev.args.args_list;
