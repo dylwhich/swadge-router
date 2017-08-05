@@ -43,6 +43,10 @@ void Wamp::on_join(uint64_t badge_id, const std::string &game_name) {
     _session->publish("game." + game_name + ".player.join", {}, {{badge_id}, {}});
 }
 
+void Wamp::on_leave(uint64_t badge_id, const std::string &game_name) {
+    _session->publish("game." + game_name + ".player.leave", {}, {{badge_id}, {}});
+}
+
 void Wamp::on_subscribe_cb(wampcc::wamp_subscribed &evt) {
     if (evt.was_error) {
         std::cout << "Err: " << evt.error_uri << std::endl;
@@ -198,6 +202,7 @@ void Wamp::run() {
         _server->set_on_scan(std::bind(&Wamp::on_scan, this, _1));
         _server->set_on_status(std::bind(&Wamp::on_status, this, _1));
         _server->set_on_join(std::bind(&Wamp::on_join, this, _1, _2));
+        _server->set_on_leave(std::bind(&Wamp::on_leave, this, _1, _2));
 
         _session->publish("game.request_register", {}, {});
 

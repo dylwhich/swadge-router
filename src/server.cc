@@ -107,9 +107,19 @@ void Server::handle_data(struct sockaddr_in &address, const char *data, ssize_t 
                 _status_callback(status);
             }
 
-            badge->second.set_last_status(std::move(status));
+            if (badge->second.in_game()) {
+                if (badge->second.check_game_quit(status)) {
+                    if (_leave_callback) {
+                        _leave_callback(badge->first, badge->second.current_game()->name());
+                    }
 
-            if (!badge->second.in_game()) {
+                    badge->second.set_lights(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+                    badge->second.set_game(nullptr);
+                }
+
+                badge->second.set_last_status(std::move(status));
+            } else {
+                badge->second.set_last_status(std::move(status));
                 for (const auto &game : _games) {
                     if (badge->second.check_game_join(&game)) {
                         badge->second.set_game(&game);

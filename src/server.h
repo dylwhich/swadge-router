@@ -5,6 +5,7 @@
 #include <functional>
 #include <unordered_map>
 #include <stdexcept>
+#include <chrono>
 
 #include "packets.h"
 
@@ -184,6 +185,7 @@ class BadgeInfo {
     Scan _last_scan;
     ButtonHistory<12> _history;
     const GameInfo *_game;
+    std::chrono::time_point<std::chrono::system_clock> _last_start_down;
 
 public:
     BadgeInfo(Server *server,
@@ -252,6 +254,23 @@ public:
                 || (game->use_location() && _location == game->location());
     }
 
+    bool check_game_quit(const Status &status) {
+        if (status.last_button() == BUTTON::START) {
+            if (status.button_down()) {
+                // This button press is the player pressing start. Save the time for later
+                _last_start_down = std::chrono::system_clock::now();
+            } else {
+                // This is the player releasing start. Check the time
+                auto now = std::chrono::system_clock::now();
+                if (std::chrono::duration_cast<std::chrono::milliseconds>(now - _last_start_down).count() > 1500) {
+                    return true;
+                }
+            }
+        }
+
+        return false;
+    }
+
     void set_game(const GameInfo *game) {
         _game = game;
     }
@@ -271,6 +290,7 @@ public:
 using ScanCallback = std::function<void(const Scan&)>;
 using StatusCallback = std::function<void(const Status&)>;
 using JoinCallback = std::function<void(uint64_t, const std::string&)>;
+using LeaveCallback = std::function<void(uint64_t, const std::string&)>;
 
 
 class Server {
@@ -280,6 +300,7 @@ class Server {
     ScanCallback _scan_callback;
     StatusCallback _status_callback;
     JoinCallback _join_callback;
+    LeaveCallback _leave_callback;
 
 
     std::unordered_map<uint64_t, BadgeInfo> _badge_ips;
@@ -300,6 +321,10 @@ public:
 
     void set_on_join(JoinCallback cb) {
         _join_callback = cb;
+    }
+
+    void set_on_leave(LeaveCallback cb) {
+        _leave_callback = cb;
     }
 
     void new_game(const std::string &name, const std::string &sequence = "", const std::string &location = "") {
