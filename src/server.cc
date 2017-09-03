@@ -73,6 +73,15 @@ const std::vector<uint64_t> Server::game_players(const std::string &game_id) {
     return players;
 }
 
+const std::vector<uint64_t> Server::all_badges() {
+    std::vector<uint64_t> badges;
+    for (const auto &badge : _badge_ips) {
+        badges.push_back(badge.first);
+    }
+
+    return badges;
+}
+
 
 void Server::handle_data(struct sockaddr_in &address, const char *data, ssize_t len) {
     if (len < sizeof(BasePacket)) {
@@ -89,17 +98,21 @@ void Server::handle_data(struct sockaddr_in &address, const char *data, ssize_t 
                 auto res = _badge_ips.emplace(
                         std::piecewise_construct,
                         std::forward_as_tuple((uint64_t)status.mac_address()),
-                        std::forward_as_tuple(this, (uint64_t)status.mac_address(), address, sizeof(struct sockaddr), "", std::move(status))
+                        std::forward_as_tuple(this, (uint64_t)status.mac_address(), address, sizeof(struct sockaddr), "")
                 );
 
                 badge = res.first;
 
-                badge->second.set_lights(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+                badge->second.set_lights(0, 5, 0, 0, 5, 0, 0, 5, 0, 0, 5, 0);
+
+                if (_new_badge_callback) {
+                    _new_badge_callback((uint64_t)status.mac_address());
+                }
             } else {
                 // We don't want to do this for a new badge, since it has no last update
                 // Check if the badge was rebooted
                 if (status.update_count() < badge->second.last_status().update_count()) {
-                    badge->second.set_lights(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+                    badge->second.set_lights(0, 5, 0, 0, 5, 0, 0, 5, 0, 0, 5, 0);
                 }
             }
 
@@ -113,7 +126,7 @@ void Server::handle_data(struct sockaddr_in &address, const char *data, ssize_t 
                         _leave_callback(badge->first, badge->second.current_game()->name());
                     }
 
-                    badge->second.set_lights(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+                    badge->second.set_lights(0, 5, 0, 0, 5, 0, 0, 5, 0, 0, 5, 0);
                     badge->second.set_game(nullptr);
                 }
 

@@ -47,6 +47,10 @@ void Wamp::on_leave(uint64_t badge_id, const std::string &game_name) {
     _session->publish("game." + game_name + ".player.leave", {}, {{badge_id}, {}});
 }
 
+void Wamp::on_new_badge(uint64_t badge_id) {
+    _session->publish("badges.new", {}, {{badge_id}, {}});
+}
+
 void Wamp::on_subscribe_cb(wampcc::wamp_subscribed &evt) {
     if (evt.was_error) {
         std::cout << "Err: " << evt.error_uri << std::endl;
@@ -212,10 +216,39 @@ void Wamp::run() {
             }
         }, _server.get());
 
+        _session->provide("badges.list", {}, [](wampcc::wamp_invocation &invoc) {
+            auto *server = reinterpret_cast<Server*>(invoc.user);
+            try {
+                wampcc::json_array badge_ids;
+
+                for (const uint64_t badge_id : server->all_badges()) {
+                    badge_ids.emplace_back(badge_id);
+                }
+                invoc.yield(wampcc::json_object {{"badges", badge_ids}});
+            } catch (std::exception &e) {
+                invoc.yield(wampcc::json_object {{"error", e.what()}});
+            }
+        }, _server.get());
+
+        /*_session->provide("badges.old", {}, [](wampcc::wamp_invocation &invoc) {
+            auto *server = reinterpret_cast<Server*>(invoc.user);
+            try {
+                wampcc::json_array badge_ids;
+
+                for (const uint64_t badge_id : server->all_badges()) {
+                    badge_ids.emplace_back(badge_id);
+                }
+                invoc.yield(wampcc::json_object {{"badges", badge_ids}});
+            } catch (std::exception &e) {
+                invoc.yield(wampcc::json_object {{"error", e.what()}});
+            }
+        }, _server.get());*/
+
         _server->set_on_scan(std::bind(&Wamp::on_scan, this, _1));
         _server->set_on_status(std::bind(&Wamp::on_status, this, _1));
         _server->set_on_join(std::bind(&Wamp::on_join, this, _1, _2));
         _server->set_on_leave(std::bind(&Wamp::on_leave, this, _1, _2));
+        _server->set_on_new_badge(std::bind(&Wamp::on_new_badge, this, _1));
 
         _session->publish("game.request_register", {}, {});
 

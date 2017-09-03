@@ -22,6 +22,7 @@ public:
     void on_status(const Status &status);
     void on_join(uint64_t badge_id, const std::string &game_name);
     void on_leave(uint64_t badge_id, const std::string &game_name);
+    void on_new_badge(uint64_t badge_id);
 
     void on_subscribe_cb(wampcc::wamp_subscribed &evt);
     void on_lights(uint64_t badge_id,

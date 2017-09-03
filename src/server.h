@@ -284,12 +284,15 @@ public:
                     uint8_t r3, uint8_t g3, uint8_t b3,
                     uint8_t r4, uint8_t g4, uint8_t b4,
                     uint8_t mask = 0, uint8_t match = 0);
+
+    void set_text(uint8_t style, const std::string &text);
 };
 
 using ScanCallback = std::function<void(const Scan&)>;
 using StatusCallback = std::function<void(const Status&)>;
 using JoinCallback = std::function<void(uint64_t, const std::string&)>;
 using LeaveCallback = std::function<void(uint64_t, const std::string&)>;
+using NewBadgeCallback = std::function<void(uint64_t)>;
 
 
 class Server {
@@ -300,6 +303,7 @@ class Server {
     StatusCallback _status_callback;
     JoinCallback _join_callback;
     LeaveCallback _leave_callback;
+    NewBadgeCallback _new_badge_callback;
 
 
     std::unordered_map<uint64_t, BadgeInfo> _badge_ips;
@@ -324,6 +328,10 @@ public:
 
     void set_on_leave(LeaveCallback cb) {
         _leave_callback = cb;
+    }
+
+    void set_on_new_badge(NewBadgeCallback cb) {
+        _new_badge_callback = cb;
     }
 
     void new_game(const std::string &name, const std::string &sequence = "", const std::string &location = "") {
@@ -352,6 +360,7 @@ public:
     }
 
     const std::vector<uint64_t> game_players(const std::string &name);
+    const std::vector<uint64_t> all_badges();
 
     void handle_data(struct sockaddr_in &address, const char *data, ssize_t len);
 
