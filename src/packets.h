@@ -161,6 +161,8 @@ class MacAddress {
     uint8_t _data[6];
 
 public:
+    MacAddress() : _data{0, 0, 0, 0, 0, 0} {}
+
     MacAddress(const uint8_t *data) {
         memcpy(_data, data, 6);
     }
@@ -201,6 +203,22 @@ class Status {
     uint8_t _sleep_performance;
     uint32_t _time;
 
+public:
+
+    Status() : _version(0),
+               _mac(),
+               _rssi(0),
+               _bssid(),
+               _gpio_state(0),
+               _last_button(BUTTON::NONE),
+               _button_down(false),
+               _system_voltage(0),
+               _update_count(0),
+               _heap_free(0),
+               _sleep_performance(0),
+               _time(0) {}
+
+
     Status(MacAddress mac,
            int version,
            int8_t rssi,
@@ -226,7 +244,6 @@ class Status {
               _sleep_performance(sleep_performance),
               _time(time) {}
 
-public:
     static const Status decode_from_packet(const StatusPacket *packet);
 
     const MacAddress &mac_address() const { return _mac; }

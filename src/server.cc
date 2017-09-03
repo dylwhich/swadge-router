@@ -137,7 +137,7 @@ void Server::handle_data(struct sockaddr_in &address, const char *data, ssize_t 
 
         case PACKET_TYPE::SCAN: {
             // TODO Scan packets may be entirely handled by another server
-            /*
+
             const Scan scan = Scan::decode_from_packet(reinterpret_cast<const ScanPacket*>(data));
             std::cout << scan << std::endl;
             auto badge = _badge_ips.find((uint64_t)scan.mac_address());
@@ -148,7 +148,7 @@ void Server::handle_data(struct sockaddr_in &address, const char *data, ssize_t 
 
             if (badge != _badge_ips.end()) {
                 badge->second.on_scan(scan);
-            }*/
+            }
 
             break;
         }

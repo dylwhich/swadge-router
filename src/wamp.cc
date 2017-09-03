@@ -124,6 +124,19 @@ void Wamp::run() {
                                 }
                             });
 
+        _session->subscribe("badge..request_scan", {{"match", "wildcard"}},
+                            std::bind(&Wamp::on_subscribe_cb, this, _1),
+                            [this] (wampcc::wamp_subscription_event ev) {
+                                auto a = ev.args.args_list;
+
+                                std::smatch res;
+                                if (std::regex_match(ev.details["topic"].as_string(), res, badge_id_regex)) {
+                                    uint64_t badge_id = std::stoull(res[1]);
+
+                                    _server->try_badge_call(&BadgeInfo::scan, badge_id);
+                                }
+                            });
+
         _session->subscribe("game.kick", {},
                             std::bind(&Wamp::on_subscribe_cb, this, _1),
                             [this] (wampcc::wamp_subscription_event ev) {
