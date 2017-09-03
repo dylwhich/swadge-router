@@ -62,14 +62,22 @@ void BadgeInfo::set_lights(uint8_t r1, uint8_t g1, uint8_t b1,
     _server->send_packet(this, (char*)&packet, sizeof(LightsPacket));
 }
 
-void BadgeInfo::set_text(uint8_t style, const std::string &text) {
-    uint8_t data[sizeof(TextPacket) + text.size() + 1];
-    auto *packet = (TextPacket*)(&data);
+void BadgeInfo::set_text(uint8_t x, uint8_t y, uint8_t style, const std::string &text) {
+    size_t data_len = sizeof(TextPacket) + text.size();
+    uint8_t *data = (uint8_t*)alloca(data_len);
+    auto *packet = reinterpret_cast<TextPacket*>(data);
+
     packet->base.type = TEXT;
     set_mac_address(packet->base.mac.mac, _mac);
-    memcpy(data+sizeof(TextPacket), text.c_str(), text.size() + 1);
+    packet->x = x;
+    packet->y = y;
+    packet->opts = style;
 
-    _server->send_packet(this, (char*)&packet, sizeof(data));
+    std::cout << "len " << text.size() << std::endl;
+
+    memcpy(&packet->text, text.c_str(), text.size() + 1);
+
+    _server->send_packet(this, (char*)data, data_len);
 }
 
 const std::vector<uint64_t> Server::game_players(const std::string &game_id) {
@@ -101,6 +109,8 @@ void Server::handle_data(struct sockaddr_in &address, const char *data, ssize_t 
     switch (reinterpret_cast<const BasePacket*>(data)->type) {
         case PACKET_TYPE::STATUS: {
             const Status status = Status::decode_from_packet(reinterpret_cast<const StatusPacket*>(data));
+
+            std::cout << status << std::endl;
 
             auto badge = _badge_ips.find((uint64_t)status.mac_address());
             if (badge == _badge_ips.end()) {

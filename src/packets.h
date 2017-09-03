@@ -162,6 +162,7 @@ struct PACKED TextPacket {
     uint8_t x;
     uint8_t y;
     uint8_t opts;
+    char text;
     // a null-terminated string is here
 };
 

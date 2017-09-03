@@ -70,7 +70,7 @@ void Wamp::on_lights(uint64_t badge_id,
 }
 
 void Wamp::on_text(uint64_t badge_id, int x, int y, uint8_t style, const std::string &text) {
-    _server->try_badge_call(&BadgeInfo::set_text, badge_id, style, text);
+    _server->try_badge_call(&BadgeInfo::set_text, badge_id, x, y, style, text);
 }
 
 static const std::regex badge_id_regex("badge\\.([0-9]+)\\..*");

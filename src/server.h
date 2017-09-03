@@ -286,7 +286,7 @@ public:
                     uint8_t r4, uint8_t g4, uint8_t b4,
                     uint8_t mask = 0, uint8_t match = 0);
 
-    void set_text(uint8_t style, const std::string &text);
+    void set_text(uint8_t x, uint8_t y, uint8_t style, const std::string &text);
 };
 
 using ScanCallback = std::function<void(const Scan&)>;
