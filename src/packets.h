@@ -49,6 +49,7 @@ enum PACKET_TYPE {
     DEEP_SLEEP = 0x09,
       
     STATUS_REQUEST = 0x11,
+    TEXT = 0x12,
 };
 
 const char button_char(BUTTON b);
@@ -153,6 +154,15 @@ struct PACKED ConfigurePacket {
     uint8_t disable_push;
     uint8_t disable_raw;
     uint8_t raw_rate; // 0x1a is recommended
+};
+
+struct PACKED TextPacket {
+    BasePacket base;
+
+    uint8_t x;
+    uint8_t y;
+    uint8_t opts;
+    // a null-terminated string is here
 };
 
 #undef PACKED

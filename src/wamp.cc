@@ -69,6 +69,10 @@ void Wamp::on_lights(uint64_t badge_id,
     _server->try_badge_call(&BadgeInfo::set_lights, badge_id, r1, g1, b1, r2, g2, b2, r3, g3, b3, r4, g4, b4, match, mask);
 }
 
+void Wamp::on_text(uint64_t badge_id, int x, int y, uint8_t style, const std::string &text) {
+    _server->try_badge_call(&BadgeInfo::set_text, badge_id, style, text);
+}
+
 static const std::regex badge_id_regex("badge\\.([0-9]+)\\..*");
 
 void Wamp::run() {
@@ -165,6 +169,44 @@ void Wamp::run() {
                                     _server->try_badge_call(&BadgeInfo::set_lights, badge_it->mac(), 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
                                 }
 
+                            });
+
+        _session->subscribe("badge..text", {{"match", "wildcard"}},
+                            std::bind(&Wamp::on_subscribe_cb, this, _1),
+                            [this] (wampcc::wamp_subscription_event ev) {
+                                auto a = ev.args.args_list;
+                                auto aa = ev.args.args_dict;
+
+                                if (a.size() < 3) return;
+
+                                std::smatch res;
+                                if (std::regex_match(ev.details["topic"].as_string(), res, badge_id_regex)) {
+                                    uint64_t badge_id = std::stoull(res[1]);
+
+                                    const std::string &text = a[2].as_string();
+                                    uint8_t opts = 0;
+                                    auto f = aa.find("style");
+                                    if (f != aa.end()) {
+                                        opts = (uint8_t)(f->second.as_uint() & 0xff);
+                                    }
+
+                                    std::cout << "Sending text " << text << std::endl;
+                                    on_text(badge_id, (uint8_t)a[0].as_uint(), (uint8_t)a[1].as_uint(), opts, text);
+                                }
+                            });
+
+        _session->subscribe("badge..clear_text", {{"match", "wildcard"}},
+                            std::bind(&Wamp::on_subscribe_cb, this, _1),
+                            [this] (wampcc::wamp_subscription_event ev) {
+                                std::smatch res;
+                                if (std::regex_match(ev.details["topic"].as_string(), res, badge_id_regex)) {
+                                    uint64_t badge_id = std::stoull(res[1]);
+
+                                    on_text(badge_id, 0, 0, 1, "          ");
+                                    on_text(badge_id, 0, 16, 1, "          ");
+                                    on_text(badge_id, 0, 32, 1, "          ");
+                                    on_text(badge_id, 0, 48, 1, "          ");
+                                }
                             });
 
         _session->provide("game.register", {}, [](wampcc::wamp_invocation &invoc) {

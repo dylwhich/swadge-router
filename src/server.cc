@@ -62,6 +62,16 @@ void BadgeInfo::set_lights(uint8_t r1, uint8_t g1, uint8_t b1,
     _server->send_packet(this, (char*)&packet, sizeof(LightsPacket));
 }
 
+void BadgeInfo::set_text(uint8_t style, const std::string &text) {
+    uint8_t data[sizeof(TextPacket) + text.size() + 1];
+    auto *packet = (TextPacket*)(&data);
+    packet->base.type = TEXT;
+    set_mac_address(packet->base.mac.mac, _mac);
+    memcpy(data+sizeof(TextPacket), text.c_str(), text.size() + 1);
+
+    _server->send_packet(this, (char*)&packet, sizeof(data));
+}
+
 const std::vector<uint64_t> Server::game_players(const std::string &game_id) {
     std::vector<uint64_t> players;
     for (const auto &player : _badge_ips) {

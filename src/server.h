@@ -5,6 +5,7 @@
 #include <functional>
 #include <unordered_map>
 #include <stdexcept>
+#include <iostream>
 #include <chrono>
 
 #include "packets.h"

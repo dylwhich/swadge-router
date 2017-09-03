@@ -31,6 +31,7 @@ public:
                    int r3, int g3, int b3,
                    int r4, int g4, int b4,
                    int match=0, int mask=0);
+    void on_text(uint64_t badge_id, int x, int y, uint8_t style, const std::string &text);
 
     void run();
 };
